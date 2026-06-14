@@ -59,7 +59,7 @@ def verdict(ok, en, ru):
         st.error(t(f"REJECTED. {en}", f"ОПРОВЕРГНУТА. {ru}"))
 
 
-st.title(t("What shapes the OFZ yield curve", "Что задаёт форму кривой доходности ОФЗ"))
+st.title(t("OFZ yield curve: Factors and financial drivers", "Что задаёт форму кривой доходности ОФЗ"))
 
 st.write(t(
     "The yield curve plots the return an investor demands for lending money over different horizons. Its "
@@ -419,7 +419,7 @@ with st.container(border=True):
         f"**{res4['inverted_low'] * 100:.0f}% to {res4['inverted_high'] * 100:.0f}% of days**.\n"
         f"- **Scope of the model.** It explains the curve only when a spread exists: median R² climbs to "
         f"**{wide:.2f}** at wide spreads and falls to **{flat:.2f}** on a flat curve, where the fit is just "
-        "an average line. This refines Hypothesis 1 without breaking it.",
+        "an average line. This refines Hypothesis 1 without breaking it.\n",
         f"- **Параллельный сдвиг подтверждён.** Уровень идёт за ключом с **r = {res1['corr']:.2f}**, "
         "политика двигает всю кривую целым блоком.\n"
         f"- **Короткий и длинный конец подтверждены.** Короткий конец **в {ratio:.1f} раза чувствительнее** "
@@ -432,6 +432,15 @@ with st.container(border=True):
         f"до **{wide:.2f}** на широких спредах и падает до **{flat:.2f}** на плоской кривой, где фит это "
         "просто средняя прямая. Это уточняет Гипотезу 1, не ломая её.",
     ))
+
+st.markdown(t(
+    "Other remarkable things we found but did not have a clear hypothesis for. The curve is almost never flat, the"
+    "short end is almost always above the long end, and the curvature is almost always positive. The market "
+    "really does like a hump in the middle, and it is not just a level and a tilt.",
+    "Все четыре гипотезы подтверждаются на четырёх годах данных по ОФЗ. Трёх чисел Нельсона-Сигеля, "
+    "уровень, наклон и кривизна, достаточно, чтобы описать движение кривой, и каждое из них "
+    "соответствует реальной экономической силе.",
+))
 
 with st.expander(t("Factor table", "Таблица факторов")):
     st.dataframe(merged[["trade_date", "level", "slope", "curvature", "r2", "rate"]])
