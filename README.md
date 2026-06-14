@@ -42,3 +42,16 @@ To rebuild the data from scratch:
 ```
 python build_database.py 2021 2022 2023 2024
 ```
+
+## Sharing a public link
+
+To open the running app from another machine without a localhost address, expose the local Streamlit
+port through a Cloudflare quick tunnel:
+
+```
+cloudflared tunnel --protocol http2 --url http://127.0.0.1:8501
+```
+
+It prints a public `https://...trycloudflare.com` link that works from anywhere while your machine and
+the tunnel stay running. The `http2` protocol is used because some networks block the default QUIC
+transport.

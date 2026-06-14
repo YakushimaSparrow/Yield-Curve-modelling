@@ -5,3 +5,5 @@ __pycache__/
 *.log
 .DS_Store
 .streamlit/secrets.toml
+run.sh
+cf_tunnel.log
