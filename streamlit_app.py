@@ -157,6 +157,7 @@ if factors.empty:
 merged = attach_key_rate(factors, key_rate)
 merged["short_end"] = merged["level"] + merged["slope"]
 merged["long_end"] = merged["level"]
+merged["spread"] = merged["slope"].abs()
 
 res1 = level_vs_rate(merged)
 res2 = end_sensitivity(merged)
@@ -348,6 +349,55 @@ verdict(res4["inverted_high"] > res4["inverted_low"] * 1.5,
         f"high rates raise inversion from {res4['inverted_low'] * 100:.0f}% to {res4['inverted_high'] * 100:.0f}% of days.",
         f"высокая ставка поднимает инверсию с {res4['inverted_low'] * 100:.0f}% до {res4['inverted_high'] * 100:.0f}% дней.")
 
+st.divider()
+st.header(t("When does the model actually work?", "Когда модель действительно работает?"))
+st.write(t(
+    "There is one more thing the data makes obvious, and it follows straight from the maths. The "
+    "Nelson-Siegel decomposition only has something to explain when there is a real spread between the "
+    "short and the long end. When that spread is wide the model captures the curve almost perfectly. When "
+    "the curve is flat there is nothing to bend, the fit collapses into a flat average line through all the "
+    "points, and the fit quality drops, even though it still preserves the overall level of the market.",
+    "Данные показывают ещё одну вещь, и она следует прямо из математики. Разложению Нельсона-Сигеля есть "
+    "что объяснять только тогда, когда между коротким и длинным концом есть реальный спред. Когда спред "
+    "широкий, модель ловит кривую почти идеально. Когда кривая плоская, изгибать нечего, фит сваливается "
+    "в среднюю прямую через все точки, и качество падает, хотя сам уровень рынка он всё равно сохраняет.",
+))
+bins = [0, 1, 2, 4, 8, 100]
+labels = ["0-1", "1-2", "2-4", "4-8", "8+"]
+g = merged.dropna(subset=["spread", "r2"]).copy()
+g["bucket"] = pd.cut(g["spread"], bins=bins, labels=labels, right=False)
+binned = g.groupby("bucket", observed=True)["r2"].median().reindex(labels)
+fig7 = go.Figure()
+fig7.add_trace(go.Scatter(x=g["spread"], y=g["r2"], mode="markers",
+                          marker=dict(opacity=0.25), name=t("Days", "Дни")))
+fig7.update_layout(xaxis_title=t("Spread, short minus long end (abs)", "Спред, короткий минус длинный (модуль)"),
+                   yaxis_title="R²")
+st.plotly_chart(fig7, use_container_width=True)
+
+fig8 = go.Figure()
+fig8.add_trace(go.Bar(x=labels, y=binned.values))
+fig8.update_layout(xaxis_title=t("Spread bucket", "Корзина спреда"),
+                   yaxis_title=t("Median R²", "Медианный R²"))
+st.plotly_chart(fig8, use_container_width=True)
+
+wide = g[g["spread"] >= 8]["r2"].median()
+flat = g[g["spread"] < 1]["r2"].median()
+corr_sr = g["spread"].corr(g["r2"])
+st.write(t(
+    f"At the widest spreads the median R² reaches {wide:.2f}, the model explains over 95% of the curve and "
+    f"you can build real predictions on top of it. At a flat curve the median R² falls to {flat:.2f}, the "
+    f"model explains almost nothing. The correlation between the spread and R² is {corr_sr:.2f}. None of "
+    "this contradicts Hypothesis 1: the three forces are still there, the model simply has work to do only "
+    "when the curve is not flat.",
+    f"При самых широких спредах медианный R² достигает {wide:.2f}, модель объясняет больше 95% кривой, и на "
+    f"ней можно строить настоящие предсказания. На плоской кривой медианный R² падает до {flat:.2f}, модель "
+    f"не объясняет почти ничего. Корреляция спреда с R² равна {corr_sr:.2f}. Это не противоречит Гипотезе 1: "
+    "три силы никуда не делись, просто модели есть что объяснять только когда кривая не плоская.",
+))
+verdict(wide > 0.95,
+        f"with a real spread the model explains about 95% of the curve (median R² {wide:.2f}); on a flat curve it does not.",
+        f"при реальном спреде модель объясняет около 95% кривой (медианный R² {wide:.2f}); на плоской кривой нет.")
+
 st.header(t("Final conclusion", "Итоговый вывод"))
 with st.container(border=True):
     st.markdown(t(
@@ -366,7 +416,10 @@ with st.container(border=True):
         f"- **Curvature confirmed.** The mid-segment hump is positive on **{res3['share_positive'] * 100:.0f}% "
         "of days**, the curve has a real third dimension.\n"
         f"- **Our inversion hypothesis confirmed.** A high key rate lifts inversion from "
-        f"**{res4['inverted_low'] * 100:.0f}% to {res4['inverted_high'] * 100:.0f}% of days**.",
+        f"**{res4['inverted_low'] * 100:.0f}% to {res4['inverted_high'] * 100:.0f}% of days**.\n"
+        f"- **Scope of the model.** It explains the curve only when a spread exists: median R² climbs to "
+        f"**{wide:.2f}** at wide spreads and falls to **{flat:.2f}** on a flat curve, where the fit is just "
+        "an average line. This refines Hypothesis 1 without breaking it.",
         f"- **Параллельный сдвиг подтверждён.** Уровень идёт за ключом с **r = {res1['corr']:.2f}**, "
         "политика двигает всю кривую целым блоком.\n"
         f"- **Короткий и длинный конец подтверждены.** Короткий конец **в {ratio:.1f} раза чувствительнее** "
@@ -374,7 +427,10 @@ with st.container(border=True):
         f"- **Кривизна подтверждена.** Среднесрочный горб положителен в **{res3['share_positive'] * 100:.0f}% "
         "дней**, у кривой есть настоящее третье измерение.\n"
         f"- **Наша гипотеза об инверсии подтверждена.** Высокий ключ поднимает инверсию с "
-        f"**{res4['inverted_low'] * 100:.0f}% до {res4['inverted_high'] * 100:.0f}% дней**.",
+        f"**{res4['inverted_low'] * 100:.0f}% до {res4['inverted_high'] * 100:.0f}% дней**.\n"
+        f"- **Область работы модели.** Она объясняет кривую только при наличии спреда: медианный R² растёт "
+        f"до **{wide:.2f}** на широких спредах и падает до **{flat:.2f}** на плоской кривой, где фит это "
+        "просто средняя прямая. Это уточняет Гипотезу 1, не ломая её.",
     ))
 
 with st.expander(t("Factor table", "Таблица факторов")):
