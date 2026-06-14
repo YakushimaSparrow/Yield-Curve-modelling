@@ -1,4 +1,8 @@
+import threading
+import time
+
 import requests
+import uvicorn
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -10,6 +14,33 @@ from analysis import attach_key_rate, level_vs_rate, end_sensitivity, curvature_
 API = "http://127.0.0.1:8080/api/v1"
 
 st.set_page_config(page_title="OFZ Yield Curve", layout="wide")
+
+
+@st.cache_resource
+def start_api():
+    try:
+        requests.get(f"{API}/factors", timeout=1)
+        return True
+    except Exception:
+        pass
+
+    from api import app as api_app
+
+    def run():
+        uvicorn.run(api_app, host="127.0.0.1", port=8080, log_level="warning")
+
+    threading.Thread(target=run, daemon=True).start()
+
+    for _ in range(60):
+        try:
+            requests.get(f"{API}/factors", timeout=1)
+            return True
+        except Exception:
+            time.sleep(0.25)
+    return False
+
+
+start_api()
 
 
 @st.cache_data(ttl=300)

@@ -31,9 +31,14 @@ years of data.
 
 ```
 pip install -r requirements.txt
-python build_database.py 2021 2022 2023 2024
-uvicorn api:app --port 8080
 streamlit run streamlit_app.py
 ```
 
-The database with 2021–2024 data is already in `database.db`, so the download step can be skipped.
+The Streamlit app starts the FastAPI service on its own, so a single command is enough. The database with
+2021-2024 data is already in `database.db`, so there is no need to download anything first.
+
+To rebuild the data from scratch:
+
+```
+python build_database.py 2021 2022 2023 2024
+```
